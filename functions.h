@@ -12,6 +12,7 @@ enum Organs{EYE,NOSE,MOUTH};
 class DataPath{
 public:
     DataPath();
+    string picture_path;
     string features_path;
     string raw_location_path;
     string refine_location_path;
@@ -52,9 +53,11 @@ int preProcessData(const string file_path,map<string,string>* data_set);
 //mosaic the part of the match img
 int partMosaic(Mat& face_model, const Mat &organs, const Rect& rect);
 
-int parseFormat(const std::string& line,std::vector<string>& result);
+int parseFormat(const std::string& line, std::vector<string> &result);
 
 int readPreFeatures(const string& path,map<string,string>& preFeatures);
+
+int writeLocations(const vector<Rect>&src, ofstream &path);
 //allignment the face size
 //int alignmentFaceSize(Rect,Mat src2,)
 

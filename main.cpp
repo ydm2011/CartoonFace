@@ -105,6 +105,9 @@ int main(int argc, char**argv)
     DataPath path;
     Mat edge_test;
     iter = fix_roi.begin();
+    ofstream out_locations;
+    out_locations.open(path.raw_location_path.c_str(),ios::out);
+    writeLocations(faces,out_locations);
 
     //getSkeletonOfRoi(src_gray(*iter),edge_test);
     //imshow("src",edge_test);
@@ -121,14 +124,9 @@ int main(int argc, char**argv)
     string cartoon_face;
     cartoon_face = matchProcess(face_roi,data_set);
 
-    /*
-    //alignment
-    resize(test_face,test_face,face_roi.size());
-
-    Mat test_eye = imread("/home/daoming/Desktop/organs/eye_big1_pencil.png");
-    resize(test_eye,test_eye,Size(eyes[0].width,eyes[0].height));
-    partMosaic(test_face,test_eye,eyes[0]);*/
-
+    //read refine position;
+    //path.refine_location_path;
+    //parseFormat(line,vector<string>test;)
     cout << "Hello World!" << endl;
     return 0;
 }

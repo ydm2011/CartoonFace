@@ -258,15 +258,12 @@ string matchProcess(Mat src, map<string,string>& data_set)
     return data_set_key;
 }
 
-int writeLocations(const vector<Rect>&src,const string& path)
+int writeLocations(const vector<Rect>&src,ofstream& path)
 {
-    ofstream out;
-    out.open(path.c_str(),ios::out|ios::app);
-
-    assert(out);
+    assert(path);
     for(int i=0; i< src.size();++i)
     {
-        out<<src[i].x<<","<<src[i].y<<","
+        path<<src[i].x<<","<<src[i].y<<","
            <<src[i].height<<","<<src[i].width<<endl;
     }
 }
@@ -287,7 +284,6 @@ int readPreFeatures(const string& path,map<string,string>& preFeatures)
         preFeatures[result[0]]=result[1];
     }
 }
-
 int parseFormat(const std::string& line,std::vector<string>& result)
 {
     int temp_pos=0;
@@ -320,7 +316,9 @@ int partMosaic(Mat& face_model,const Mat& organs,const Rect& rect)
 
 //data path
 DataPath::DataPath():features_path("./features.dat"),
-    raw_location_path("./raw_location.dat"),refine_location_path("./refine_location.dat")
+    raw_location_path("./raw_location.dat"),
+    refine_location_path("./refine_location.dat"),
+    picture_path("./photo.jpg")
 {
     ;
 }
