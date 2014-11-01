@@ -47,9 +47,38 @@ void getSkeletonOfRoi(const Mat& src,Mat& edge)
 {
     Mat temp;
     medianBlur(src,temp,3);//erase the pot dirty pixels
-    GaussianBlur(temp,temp,Size(3,3),1);//
+    GaussianBlur(temp,edge,Size(3,3),1);//
     bilateralFilter(temp,edge,9,9,7);//keep the edge while denoising
     Laplacian(edge,edge,CV_8U,5);
+}
+
+//extract the main face
+int extractFace(vector<Rect>& faces)
+{
+    vector<Rect> result;
+    int max_height=0;
+    int max_width=0;
+    int max_height_pos=0;
+    int max_width_pos=0;
+    for(int i=0;i<faces.size();++i)
+    {
+        if(faces[i].width>max_width)
+        {
+            max_width_pos = i;
+            max_width = faces[i].width;
+        }
+        if(faces[i].height>max_height)
+        {
+            max_height_pos = i;
+            max_height = faces[i].height;
+        }
+    }
+    if(max_width_pos == max_height_pos)
+    {
+        result.push_back(faces[max_height_pos]);
+    }else result.push_back(faces[max_height_pos]);
+    faces.clear();
+    faces = result;
 }
 //void refine the detect result
 int refineface(const Rect& face,const vector<Rect>& organs,int threshold)
@@ -136,7 +165,7 @@ void writePosition(Rect& rect,ofstream& out)
 }
 
 //pHash algorithm
- string pHashValue(const Mat &src)
+ string pHashValue(Mat& src)
  {
      Mat img ,dst;
      string rst(64,'\0');
@@ -220,7 +249,7 @@ string match(const string& hash_target,const map<string,string>& hash_datas)
 }
 
 //matchProcess
-string matchProcess(const Mat& src,map<string,string>& data_set)
+string matchProcess(Mat src, map<string,string>& data_set)
 {
     string hash_value;
     hash_value = pHashValue(src);
@@ -228,8 +257,56 @@ string matchProcess(const Mat& src,map<string,string>& data_set)
     data_set_key = match(hash_value,data_set);
     return data_set_key;
 }
+
+int writeLocations(const vector<Rect>&src,const string& path)
+{
+    ofstream out;
+    out.open(path.c_str(),ios::out|ios::app);
+
+    assert(out);
+    for(int i=0; i< src.size();++i)
+    {
+        out<<src[i].x<<","<<src[i].y<<","
+           <<src[i].height<<","<<src[i].width<<endl;
+    }
+}
+
+int readPreFeatures(const string& path,map<string,string>& preFeatures)
+{
+    ifstream in;
+    in.open(path.c_str(),ios::in);
+    assert(in);
+    string line;
+    vector<string> result;
+    string key;
+    while(!in.eof())
+    {
+        in>>line;
+        parseFormat(line,result);
+        assert(result.size()!=2);
+        preFeatures[result[0]]=result[1];
+    }
+}
+
+int parseFormat(const std::string& line,std::vector<string>& result)
+{
+    int temp_pos=0;
+    result.clear();
+    if(!line.size())
+        return -1;
+    for(int i=0;i<line.size();++i)
+    {
+        if(line[i]!=',')
+            continue;
+        result.push_back(std::string(line,temp_pos,i-temp_pos));
+        temp_pos = i+1;
+    }
+    result.push_back(string(line,temp_pos,line.size()-temp_pos));
+    return 0;
+}
+
 //load the given parameters:filepath; material path and so on
-int preProcessData(const string& file_path,map<string,string>* data_set)
+int preProcessData(const string& file_path,map<string,string>& data_set)
 {
     ;
 }
@@ -237,11 +314,16 @@ int preProcessData(const string& file_path,map<string,string>* data_set)
 //mosaic the part of the match img
 int partMosaic(Mat& face_model,const Mat& organs,const Rect& rect)
 {
-    Mat image_roi = face_model(rect);
-    organs.copyTo(image_roi);
+    ;
 }
 
 
+//data path
+DataPath::DataPath():features_path("./features.dat"),
+    raw_location_path("./raw_location.dat"),refine_location_path("./refine_location.dat")
+{
+    ;
+}
 
 
 
