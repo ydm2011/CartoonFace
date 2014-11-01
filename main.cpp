@@ -1,10 +1,35 @@
 #include "functions.h"
 using namespace std;
 using namespace cv;
+
+
+int main()
+{
+    DataPath path;
+    GetLocation getlocation;
+    getlocation.findLocations(path);
+    map<string,string> key_pairs;//this was the match cartoon
+
+    getlocation.getAllMatchKey(path,key_pairs);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
 int main(int argc, char**argv)
 {
     //this will replace by the qt;
-    Mat src = imread("/home/daoming/Desktop/test.jpg");
+    Mat src = imread("/home/daoming/Desktop/test4.jpg");
     //imshow("src",src);
     //waitKey(0);
 
@@ -53,7 +78,7 @@ int main(int argc, char**argv)
     ofstream out;
     out.open("/home/daoming/Desktop/1.dat",ios::out);
     out<<"womanface1"<<","<<test_face_hash;
-    out.close();*/
+    out.close();
     //detect faces
     face_cascade.detectMultiScale(src_gray,faces,1.1,2,0|CV_HAAR_SCALE_IMAGE,Size(30,30));
     if(faces.size()!=1)
@@ -68,8 +93,6 @@ int main(int argc, char**argv)
         cout<<"Can't detect the faces"<<endl;
         return -1;
     }
-
-
     //get the eyes mouth nose on the face
     vector<Rect> eyes;
     vector<Rect> mouths;
@@ -86,9 +109,9 @@ int main(int argc, char**argv)
         imshow("src_gray",src_gray);
         waitKey(0);
         //eyes region
-        eyes_cascade.detectMultiScale(face_roi,eyes, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, Size(20, 20));
+        eyes_cascade.detectMultiScale(face_roi,eyes, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, Size(10, 10));
         //erase the faked face
-        if(!refineface(*iter,eyes,20))
+        if(refineface(*iter,eyes,10))
             continue;
         //mouth region
         mouth_cascade.detectMultiScale(face_roi,mouths, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30));
@@ -114,19 +137,20 @@ int main(int argc, char**argv)
     //waitKey(0);
     //read
     //use the fake data
-    map<string,string> data_set;
-    readPreFeatures(path.features_path,data_set);
+    //map<string,string> data_set;
+    //readPreFeatures(path.features_path,data_set);
     //ofstream in;
     //in.open();
     //data_set["womanface1"] = test_face_hash;
 
     //get the best match;
-    string cartoon_face;
-    cartoon_face = matchProcess(face_roi,data_set);
+    //string cartoon_face;
+    //cartoon_face = matchProcess(face_roi,data_set);
 
     //read refine position;
     //path.refine_location_path;
     //parseFormat(line,vector<string>test;)
-    cout << "Hello World!" << endl;
-    return 0;
+    //cout << "Hello World!" << endl;
+    //return 0;
 }
+*/

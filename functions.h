@@ -42,7 +42,7 @@ void writePosition(Rect& rect,ofstream& out);
 int hanmingDistance(const string &str1,const string &str2);
 
 //get the nearest hamming distance from the dataset
-string match(const Mat& src,const map<string,string>& hash_datas);
+string match(const string& src_phash,const map<string,string>& hash_datas);
 
 //matchProcess
 string matchProcess(Mat src, map<string,string>& data_set);
@@ -58,7 +58,17 @@ int parseFormat(const std::string& line, std::vector<string> &result);
 int readPreFeatures(const string& path,map<string,string>& preFeatures);
 
 int writeLocations(const vector<Rect>&src, ofstream &path);
+
+int findLocations(const DataPath& path);
 //allignment the face size
 //int alignmentFaceSize(Rect,Mat src2,)
+
+class GetLocation{
+public:
+    int findLocations(const DataPath &path);
+    string getMatchKey(const string& src_phash,DataPath& path);
+    int getAllMatchKey(DataPath& path,map<string,string>& key_pairs);
+private:
+};
 
 #endif // FUNCTIONS_H

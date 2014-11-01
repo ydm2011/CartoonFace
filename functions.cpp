@@ -102,6 +102,7 @@ int refineOrgans(vector<Rect>& eyes,vector<Rect>& mouths,vector<Rect>& noses)
         temp = eyes[0];
         temp.x = eyes[0].x+ mouths[0].x + mouths[0].width/2-eyes[0].width;
         temp.y = eyes[0].y;
+        eyes.push_back(temp);
     }
     if(eyes.size()>=3)
     {
@@ -109,6 +110,7 @@ int refineOrgans(vector<Rect>& eyes,vector<Rect>& mouths,vector<Rect>& noses)
     }
     //refine mouth
     temp = Rect();
+    vector<Rect> temp_mouths;
     if(mouths.size()!=1&&!mouths.empty())
     {
         for(int i=0;i<mouths.size();++i)
@@ -116,10 +118,27 @@ int refineOrgans(vector<Rect>& eyes,vector<Rect>& mouths,vector<Rect>& noses)
             if(mouths[i].y>eyes[0].y&&mouths[i].x>(eyes[0].x<eyes[1].x?eyes[0].x:eyes[1].x))
             {
                 temp = mouths[i];
+                temp_mouths.push_back(temp);
+            }
+        }
+        int position=-1;
+        if(temp_mouths.size()!=1&&temp_mouths.size()!=0)
+        {
+            int temp_pos=temp_mouths[0].height+temp_mouths[0].y;
+            position=0;
+            for(int i=1; i< temp_mouths.size(); ++i)
+            {
+                if(temp_pos>temp_mouths[i].height+temp_mouths[i].y)
+                {
+                    temp_pos = temp_mouths[i].height+temp_mouths[i].y;
+                    position = i;
+                }
             }
         }
         mouths.clear();
-        mouths.push_back(temp);
+        if(position!=-1)
+            mouths.push_back(temp_mouths[position]);
+        else mouths.push_back(temp);
     }
     //refine nose
     temp = Rect();
@@ -137,14 +156,14 @@ int refineOrgans(vector<Rect>& eyes,vector<Rect>& mouths,vector<Rect>& noses)
     }
     //erase the overide
     int local_overide;
-    if(noses[0].y+noses[0].height>mouths[0].y+mouths[0].height/2)
+    if(noses[0].y+noses[0].height>mouths[0].y)
     {
         local_overide = noses[0].y+noses[0].height-mouths[0].y;
         local_overide /=2;
         if(noses[0].height-local_overide>0)
             noses[0].height -= local_overide;
         else noses[0].height = local_overide;
-        local_overide = noses[0].y + noses[0].height- mouths[0].y;
+        local_overide *= 2;
         if(local_overide>0)
         {
             local_overide /=2;
@@ -230,7 +249,7 @@ int hanmingDistance(const string &str1,const string &str2)
     return difference;
 }
 //get the nearest hamming distance from the dataset
-string match(const string& hash_target,const map<string,string>& hash_datas)
+string match(const string& src_phash, const map<string,string>& hash_datas)
 {
     map<string,string>::const_iterator iter = hash_datas.begin();
     string key;
@@ -238,7 +257,7 @@ string match(const string& hash_target,const map<string,string>& hash_datas)
     int distance;
     for( ; iter!=hash_datas.end();++iter)
     {
-        distance = hanmingDistance(hash_target,iter->second);
+        distance = hanmingDistance(src_phash,iter->second);
         if(min_distace>distance)
         {
             min_distace = distance;
@@ -276,6 +295,7 @@ int readPreFeatures(const string& path,map<string,string>& preFeatures)
     string line;
     vector<string> result;
     string key;
+    preFeatures.clear();
     while(!in.eof())
     {
         in>>line;
@@ -315,7 +335,7 @@ int partMosaic(Mat& face_model,const Mat& organs,const Rect& rect)
 
 
 //data path
-DataPath::DataPath():features_path("./features.dat"),
+DataPath::DataPath():features_path("./features/"),
     raw_location_path("./raw_location.dat"),
     refine_location_path("./refine_location.dat"),
     picture_path("./photo.jpg")
@@ -323,13 +343,184 @@ DataPath::DataPath():features_path("./features.dat"),
     ;
 }
 
+//get all raw locations
+int findAllLocation(const DataPath& path)
+{
+    //this will replace by the qt;
+    Mat src = imread(path.picture_path.c_str());
+    if(src.empty())
+        return -1;
+    std::vector<Rect> faces;
+    Mat src_gray;
 
+    cvtColor(src, src_gray, CV_BGR2GRAY);
 
+    medianBlur(src_gray,src_gray,3);//denosie
+    equalizeHist(src_gray, src_gray);//
 
+    //classify
+    CascadeClassifier face_cascade;
+    CascadeClassifier eyes_cascade;
+    CascadeClassifier mouth_cascade;
+    CascadeClassifier nose_cascade;
+    //the training data
+    string face_cascade_name = "/home/daoming/Qtproject/hackthon/haarcascade_frontalface_alt2.xml";
+    string eyes_cascade_name = "/home/daoming/Qtproject/hackthon/haarcascade_eye_tree_eyeglasses.xml";
+    string mouth_cascade_name = "/home/daoming/Qtproject/hackthon/haarcascade_mcs_mouth.xml";
+    string nose_cascade_name = "/home/daoming/Qtproject/hackthon/haarcascade_mcs_nose.xml";
+    if(!face_cascade.load(face_cascade_name))
+    {
+        cout<<"Error loading "<<face_cascade_name<<endl;
+        return -1;
+    }
+    if(!eyes_cascade.load(eyes_cascade_name))
+    {
+        cout<<"Error loading "<<eyes_cascade_name<<endl;
+        return -1;
+    }
+    if(!mouth_cascade.load(mouth_cascade_name))
+    {
+        cout<<"Error loading "<<mouth_cascade_name<<endl;
+        return -1;
+    }
+    if(!nose_cascade.load(nose_cascade_name))
+    {
+        cout<<"Error loading "<<eyes_cascade_name<<endl;
+        return -1;
+    }
 
+    face_cascade.detectMultiScale(src_gray,faces,1.1,2,0|CV_HAAR_SCALE_IMAGE,Size(30,30));
+    if(faces.size()!=1)
+    {
+        extractFace(faces);
+    }
+    //fix the ROi
+    vector<Rect> fix_roi;
+    resizeRoi(src_gray,faces,fix_roi,0.1,0.35);
+    if(faces.empty())
+    {
+        cout<<"Can't detect the faces"<<endl;
+        return -1;
+    }
+    //get the eyes mouth nose on the face
+    vector<Rect> eyes;
+    vector<Rect> mouths;
+    vector<Rect> noses;
 
+    Mat face_roi;
+    vector<Rect>::iterator iter = fix_roi.begin();
+    for( ; iter != fix_roi.end(); ++iter)
+    {
+        //face region
+        face_roi = src_gray(*iter);
 
+        //eyes region
+        eyes_cascade.detectMultiScale(face_roi,eyes, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, Size(10, 10));
+        //erase the faked face
+        if(refineface(*iter,eyes,10))
+            continue;
+        //mouth region
+        mouth_cascade.detectMultiScale(face_roi,mouths, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30));
 
+        //nose region
+        nose_cascade.detectMultiScale(face_roi,noses, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, Size(30, 30));
+
+        refineOrgans(eyes,mouths,noses);
+    }
+    iter = fix_roi.begin();
+    ofstream out_locations;
+    out_locations.open(path.raw_location_path.c_str(),ios::out);
+    writeLocations(faces,out_locations);
+    writeLocations(eyes,out_locations);
+    writeLocations(noses,out_locations);
+    writeLocations(mouths,out_locations);
+    out_locations.close();
+}
+Rect stringToRect(vector<string>& rect_iterm)
+{
+    Rect rect;
+    rect.x = atoi(rect_iterm[0].c_str());
+    rect.y = atoi(rect_iterm[1].c_str());
+    rect.height =atoi(rect_iterm[2].c_str());
+    rect.width = atoi(rect_iterm[3].c_str());
+}
+
+//get locations
+int GetLocation::findLocations(const DataPath &path)
+{
+    findAllLocation(path);
+}
+//
+string GetLocation::getMatchKey(const string& src_phash, DataPath &path)
+{
+    map<string,string> data_set;
+    if(!readPreFeatures(path.features_path,data_set))
+            return "";
+    return match(src_phash,data_set);
+}
+
+int GetLocation::getAllMatchKey(DataPath& path,map<string,string>& key_pairs)
+{
+    ifstream in;
+    in.open(path.refine_location_path.c_str());
+    if(!in)
+        return -1;
+    map<string,string> data_set_face;
+    map<string,string> data_set_eye;
+    map<string,string> data_set_mouth;
+    map<string,string> data_set_nose;
+
+    string line;
+    vector<string> result;
+    result.resize(10);
+    Rect rect;
+    Mat img = imread(path.picture_path.c_str());
+    int i=0;
+    string key;
+    while(!in.eof())
+    {
+        in>>line;
+        parseFormat(line,result);
+        rect = stringToRect(result);
+
+        switch(i){
+        case 0:
+            if(!readPreFeatures(path.features_path+"face.dat",data_set_face))
+               return -1;
+            key = matchProcess(img(rect),data_set_face);
+            key_pairs["face"] = key;
+            break;
+        case 1:
+            if(!readPreFeatures(path.features_path+"eye.dat",data_set_eye))
+               return -1;
+            key = matchProcess(img(rect),data_set_eye);
+            key_pairs["left_eye"] = key;
+            break;
+        case 2:
+            if(!readPreFeatures(path.features_path+"eye.dat",data_set_eye))
+               return -1;
+            key = matchProcess(img(rect),data_set_eye);
+            key_pairs["right_eye"] = key;
+            break;
+        case 3:
+            if(!readPreFeatures(path.features_path+"mouth.dat",data_set_mouth))
+               return -1;
+            key = matchProcess(img(rect),data_set_mouth);
+            key_pairs["mouth"] = key;
+            break;
+        case 4:
+            if(!readPreFeatures(path.features_path+"nose.dat",data_set_nose))
+               return -1;
+            key = matchProcess(img(rect),data_set_nose);
+            key_pairs["nose"] = key;
+            break;
+        default:
+            break;
+        }
+    }
+    in.close();
+    return 0;
+}
 
 
 
