@@ -5,11 +5,14 @@ using namespace cv;
 
 int main()
 {
+    Mat src = imread("");
+    int num = CV_64FC1;
+
     DataPath path;
     GetLocation getlocation;
     getlocation.findLocations(path);
     map<string,string> key_pairs;//this was the match cartoon
-
+    //pHashValue()
     getlocation.getAllMatchKey(path,key_pairs);
 }
 

@@ -208,10 +208,10 @@ void writePosition(Rect& rect,ofstream& out)
      dct(img, dst);
 
      //3. the mean of the coefficients of the dct
-     const uchar* ptr;// = dst.ptr<uchar>()
+     const double* ptr;// = dst.ptr<uchar>()
      for (int i = 0; i < 8; ++i)
      {
-         ptr = dst.ptr<uchar>(i);
+         ptr = dst.ptr<double>(i);
          for (int j = 0; j < 8; ++j)
          {
              dIdex[k] = ptr[j];
@@ -285,6 +285,7 @@ int writeLocations(const vector<Rect>&src,ofstream& path)
         path<<src[i].x<<","<<src[i].y<<","
            <<src[i].height<<","<<src[i].width<<endl;
     }
+    return 0;
 }
 
 int readPreFeatures(const string& path,map<string,string>& preFeatures)
@@ -303,6 +304,7 @@ int readPreFeatures(const string& path,map<string,string>& preFeatures)
         assert(result.size()!=2);
         preFeatures[result[0]]=result[1];
     }
+    return 0;
 }
 int parseFormat(const std::string& line,std::vector<string>& result)
 {
@@ -320,19 +322,6 @@ int parseFormat(const std::string& line,std::vector<string>& result)
     result.push_back(string(line,temp_pos,line.size()-temp_pos));
     return 0;
 }
-
-//load the given parameters:filepath; material path and so on
-int preProcessData(const string& file_path,map<string,string>& data_set)
-{
-    ;
-}
-
-//mosaic the part of the match img
-int partMosaic(Mat& face_model,const Mat& organs,const Rect& rect)
-{
-    ;
-}
-
 
 //data path
 DataPath::DataPath():features_path("./features/"),
@@ -435,6 +424,7 @@ int findAllLocation(const DataPath& path)
     writeLocations(noses,out_locations);
     writeLocations(mouths,out_locations);
     out_locations.close();
+    return 0;
 }
 Rect stringToRect(vector<string>& rect_iterm)
 {
@@ -443,12 +433,14 @@ Rect stringToRect(vector<string>& rect_iterm)
     rect.y = atoi(rect_iterm[1].c_str());
     rect.height =atoi(rect_iterm[2].c_str());
     rect.width = atoi(rect_iterm[3].c_str());
+    return rect;
 }
 
 //get locations
 int GetLocation::findLocations(const DataPath &path)
 {
     findAllLocation(path);
+    return 0;
 }
 //
 string GetLocation::getMatchKey(const string& src_phash, DataPath &path)
@@ -521,7 +513,3 @@ int GetLocation::getAllMatchKey(DataPath& path,map<string,string>& key_pairs)
     in.close();
     return 0;
 }
-
-
-
-
