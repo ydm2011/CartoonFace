@@ -1,4 +1,5 @@
 #include "functions.h"
+#include "face_cartoon_api.h"
 using namespace std;
 using namespace cv;
 //resize the ROi
@@ -191,7 +192,7 @@ void writePosition(Rect& rect,ofstream& out)
      double dIdex[64];
      double mean = 0.0;
      int k = 0;
-     if(src.channels()==3)
+     if(src.channels()!=1)
      {
          cvtColor(src,src,CV_BGR2GRAY);
          img = Mat_<double>(src);
@@ -301,7 +302,7 @@ int readPreFeatures(const string& path,map<string,string>& preFeatures)
     {
         in>>line;
         parseFormat(line,result);
-        assert(result.size()!=2);
+        assert(result.size()==2);
         preFeatures[result[0]]=result[1];
     }
     return 0;
@@ -327,7 +328,8 @@ int parseFormat(const std::string& line,std::vector<string>& result)
 DataPath::DataPath():features_path("./features/"),
     raw_location_path("./raw_location.dat"),
     refine_location_path("./refine_location.dat"),
-    picture_path("./photo.jpg")
+    picture_path("./photo.jpg"),
+    store_pts_picture("./points_photo.jpg")
 {
     ;
 }
@@ -353,10 +355,10 @@ int findAllLocation(const DataPath& path)
     CascadeClassifier mouth_cascade;
     CascadeClassifier nose_cascade;
     //the training data
-    string face_cascade_name = "/home/daoming/Qtproject/hackthon/haarcascade_frontalface_alt2.xml";
-    string eyes_cascade_name = "/home/daoming/Qtproject/hackthon/haarcascade_eye_tree_eyeglasses.xml";
-    string mouth_cascade_name = "/home/daoming/Qtproject/hackthon/haarcascade_mcs_mouth.xml";
-    string nose_cascade_name = "/home/daoming/Qtproject/hackthon/haarcascade_mcs_nose.xml";
+    string face_cascade_name = "/home/daoming/Qtproject/CartoonFace/haarcascade_frontalface_alt2.xml";
+    string eyes_cascade_name = "/home/daoming/Qtproject/CartoonFace/haarcascade_eye.xml";
+    string mouth_cascade_name = "/home/daoming/Qtproject/CartoonFace/haarcascade_mcs_mouth.xml";
+    string nose_cascade_name = "/home/daoming/Qtproject/CartoonFace/haarcascade_mcs_nose.xml";
     if(!face_cascade.load(face_cascade_name))
     {
         cout<<"Error loading "<<face_cascade_name<<endl;
@@ -426,6 +428,48 @@ int findAllLocation(const DataPath& path)
     out_locations.close();
     return 0;
 }
+
+//get the area of the points
+static int getArea(std::vector<float>& points,Rect& area)
+{
+    if(points.empty())
+        return -1;
+    float max_x ,max_y, min_x,min_y;
+    max_x = points[0];
+    min_x = max_x;
+    max_y = points[1];
+    min_y = max_y;
+    int position[4];
+    for(int i = 1;i<points.size()/2;++i)
+    {
+        if(max_x<points[i*2])
+        {
+            max_x = points[i*2];
+            position[0] = i;
+        }
+        else if(min_x>points[i*2])
+        {
+            min_x = points[i*2];
+            position[1] = i;
+        }
+        if(max_y < points[i*2+1])
+        {
+            max_y = points[i*2+1];
+            position[2] = i+1;
+        }
+        else if(min_y>points[i*2+1])
+        {
+            min_y = points[i*2+1];
+            position[3] = i+1;
+        }
+    }
+    area.width = max_x - min_x;
+    area.height = max_y - min_y;
+    area.x = min_x;
+    area.y = min_y;
+    return 0;
+}
+
 Rect stringToRect(vector<string>& rect_iterm)
 {
     Rect rect;
@@ -439,7 +483,67 @@ Rect stringToRect(vector<string>& rect_iterm)
 //get locations
 int GetLocation::findLocations(const DataPath &path)
 {
-    findAllLocation(path);
+    //findAllLocation(path);
+    face_360::FacePoints pts;
+
+    test_api_1_pic(path.picture_path.c_str(),path.store_pts_picture.c_str(),pts);
+    vector<Rect> area;
+    area.resize(1);
+    ofstream outfile;
+    outfile.open(path.raw_location_path.c_str());
+    if(!outfile)
+        return -1;
+    //get the left brow;
+    Rect left_brow,right_brow;
+    getArea(pts.left_brow_10,left_brow);
+    //area[0] = left_brow;
+    //writeLocations(area,outfile);
+
+    //get the right brow
+    getArea(pts.right_brow_10,right_brow);
+
+    int min_y;
+    min_y = left_brow.y<right_brow.y?left_brow.y:right_brow.y;
+    //writeLocations(area,outfile);
+   // outfile.close();
+
+    //write  the  face location
+    getArea(pts.face_shape_19,area[0]);
+    if(area[0].y>min_y)
+    {
+        area[0].height += area[0].y - min_y;
+        area[0].y = min_y;
+    }
+    writeLocations(area,outfile);
+
+
+    //write the left eye location
+    getArea(pts.left_eye_12,area[0]);
+    writeLocations(area,outfile);
+
+    //write the right eye location
+    getArea(pts.right_eye_12,area[0]);
+    writeLocations(area,outfile);
+
+    //write the nose
+    getArea(pts.nose_12,area[0]);
+    area[0].y += area[0].height/2.0+0.5;
+    area[0].height /=2;
+    writeLocations(area,outfile);
+
+    //write the mouse
+    getArea(pts.mouse_outside_12,area[0]);
+    writeLocations(area,outfile);
+
+
+    //write the brows
+    area[0] = left_brow;
+    writeLocations(area,outfile);
+
+    area[0] = right_brow;
+    writeLocations(area,outfile);
+
+    outfile.close();
     return 0;
 }
 //
@@ -447,14 +551,14 @@ string GetLocation::getMatchKey(const string& src_phash, DataPath &path)
 {
     map<string,string> data_set;
     if(!readPreFeatures(path.features_path,data_set))
-            return "";
+         return "";
     return match(src_phash,data_set);
 }
 
 int GetLocation::getAllMatchKey(DataPath& path,map<string,string>& key_pairs)
 {
     ifstream in;
-    in.open(path.refine_location_path.c_str());
+    in.open(path.raw_location_path.c_str());
     if(!in)
         return -1;
     map<string,string> data_set_face;
@@ -474,7 +578,10 @@ int GetLocation::getAllMatchKey(DataPath& path,map<string,string>& key_pairs)
         in>>line;
         parseFormat(line,result);
         rect = stringToRect(result);
-
+        imwrite(to_string(i)+".jpg",img(rect));
+        rectangle(img,rect,Scalar(255,0,0));
+        //imshow("img",img);
+        waitKey(0);
         switch(i){
         case 0:
             if(!readPreFeatures(path.features_path+"face.dat",data_set_face))
@@ -506,10 +613,18 @@ int GetLocation::getAllMatchKey(DataPath& path,map<string,string>& key_pairs)
             key = matchProcess(img(rect),data_set_nose);
             key_pairs["nose"] = key;
             break;
+        case 5:
+            if(!readPreFeatures(path.features_path+"brow.dat",data_set_nose))
+               return -1;
+            key = matchProcess(img(rect),data_set_nose);
+            key_pairs["brow"] = key;
         default:
             break;
         }
+        ++i;
     }
+    imshow("img",img);
+    waitKey(0);
     in.close();
     return 0;
 }

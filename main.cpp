@@ -1,16 +1,40 @@
 #include "functions.h"
+#include "face_api.h"
+#include "face_api_test.h"
+#include "face_common.h"
+#include "face_cartoon_api.h"
+#include <string>
 using namespace std;
 using namespace cv;
-
+void preProcess(Mat& src,const string& name,ofstream& outfile)
+{
+    string hash_value;
+    hash_value = pHashValue(src);
+    outfile<<name<<","<<hash_value<<endl;
+}
 
 int main()
 {
-    Mat src = imread("");
-    int num = CV_64FC1;
-
+    //face_360::
+    //face_360
+   // test_api_1_pic()
+    //Mat src = imread("");
+    /*
+    ofstream outfile;
+    outfile.open("./eye.dat",ios::out);
+    string img_path = "/home/daoming/Desktop/123/eye_";
+    for(int i=1;i<13;++i)
+    {
+        Mat img = imread(img_path+to_string(i)+".jpg");
+        preProcess(img,"eye_"+to_string(i),outfile);
+    }*/
     DataPath path;
+    path.picture_path = "/home/daoming/Desktop/456/1393302485.jpg";
     GetLocation getlocation;
+
     getlocation.findLocations(path);
+   // GetLocation getlocation;
+   // getlocation.findLocations(path);
     map<string,string> key_pairs;//this was the match cartoon
     //pHashValue()
     getlocation.getAllMatchKey(path,key_pairs);

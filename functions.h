@@ -4,8 +4,10 @@
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
+#include "face_cartoon_api.h"
 #include <map>
 #include <fstream>
+#include <vector>
 using namespace cv;
 using namespace std;
 enum Organs{EYE,NOSE,MOUTH};
@@ -14,6 +16,7 @@ public:
     DataPath();
     string picture_path;
     string features_path;
+    string store_pts_picture;
     string raw_location_path;
     string refine_location_path;
 };
